@@ -149,6 +149,7 @@ function setupCronJob(message){
   //var manageGuild = new cron.CronJob(`* ${minutesStart}/${minutesStop} ${hourStart}/${hourStop} * * *`, changeGuildStatus(storedMessage));
   //var manageGuild = new cron.CronJob('*2 * * * * *', changeGuildStatus(storedMessage));
   //manageGuild.start();
+
   console.log(" Setting up the CronJob");
   task = cron.schedule(`${minutesStart},${minutesStop} ${hourStart},${hourStop} * * *`, () => changeGuildStatus(storedMessage));
   console.log(" -----CronJob starting!-----")
@@ -458,4 +459,4 @@ client.on("messageReactionRemove",(reaction,user)=>{
   }
 });
 */
-client.login(process.env.BOT_TOKEN)
+client.login("NjkyMjkwNDE0MDk0MzE5NjY2.XntBiQ.tABDBhvlUrQU7-YTyLmoYM726GQ")
