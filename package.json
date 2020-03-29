@@ -1,0 +1,24 @@
+{
+  "name": "szkolny",
+  "version": "0.0.1",
+  "description": "Bot do obsługi serwera",
+  "main": "index_test.js",
+  "engines": {
+    "node": "v13.11.0",
+    "npm" : "*"
+  },
+  "scripts": {
+    "start": "node index_test.js",
+    "dev": "nodemon index_test.js"
+  },
+  "dependencies": {
+    "cron": "^1.8.2",
+    "discord.js": "^11.6.3",
+    "dotenv": "^8.2.0",
+    "fs": "0.0.1-security",
+    "node-cron": "^2.0.3"
+  },
+  "devDependencies": {
+    "nodemon": "^1.18.9"
+  }
+}
