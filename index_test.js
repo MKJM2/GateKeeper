@@ -352,6 +352,11 @@ client.on('message', async message => {
 
   if(command === `${prefix}status`){
     message.channel.send("GateKeeper obecny!");
+    if(guildActive){
+      statusMessage.fields[0].value = "Serwer aktywny";
+    } else {
+      statusMessage.fields[0].value = 'Serwer nieaktywny';
+    }
     if(task){
       statusMessage.fields[1].value = `${hourStart}:${minutesStart}`
       //statusMessage.fields[1] = ("Godzina zamknięcia:", `${hourStop}:${minutesStop}`, true);
