@@ -106,6 +106,9 @@ function muteVC(message){
 }*/
 
 function startGuild(message){
+  if(guildActive){
+    console.log("Starting the guild unsuccessful: Guild already running!")
+  }
   if(!roleExists()){
     message.channel.send("Please run !setup first before executing any commands.");
     return;
@@ -116,6 +119,9 @@ function startGuild(message){
 }
 
 function stopGuild(message){
+  if(!guildActive){
+    console.log("Stopping the guild unsuccessful: Guild already stopped!")
+  }
   if(!roleExists()){
     message.channel.send("Please run !setup first before executing any commands.");
     return;
