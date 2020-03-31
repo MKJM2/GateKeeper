@@ -197,6 +197,25 @@ client.on('ready', () => {
 
 client.on("guildCreate", guild => {
   console.log(`New guild joined: ${guild.name} (id: ${guild.id}). Member count: ${guild.memberCount}`);
+  if(taskStart || taskStop){
+    taskStart.destroy();
+    taskStop.destroy();
+    /* this code is f**ked up lol it shouldnt work globally
+    var hourStart = undefined;
+    var timeStart = null;
+    var minutesStart = null;
+    var hourStop = null;
+    var minutesStop = null;
+    */
+    console.log(" -----CronJob destroyed!-----");
+  } else {
+    console.log(" No job to destroy.");
+  }
+  fs.writeFile('requested.txt', ``, function (err) {    //erases all requested jobs from the ./requested.txt file
+    if (err) return console.log(err);
+    console.log(` > requested.txt`);
+  });
+  console.log(" Cleared the ./requested.txt");
 });
 
 client.on("guildDelete", guild => {
@@ -374,8 +393,8 @@ client.on('message', async message => {
     if(taskStart || taskStop){
       taskStart.destroy();
       taskStop.destroy();
-      /*
-      var hourStart = null;
+      /* this code is f**ked up lol it shouldnt work globally
+      var hourStart = undefined;
       var timeStart = null;
       var minutesStart = null;
       var hourStop = null;
