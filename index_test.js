@@ -2,20 +2,22 @@ require("dotenv").config()
 const Discord = require("discord.js")
 const fs = require('fs');
 const cron = require("node-cron");
+var moment = require('moment-timezone'); // for timezone convertion
 
 const client = new Discord.Client({disableEveryone: true})
 const prefix = "!"
 var role;
 var guildActive = true;
-var currentDate = new Date();
 var storedMessage; //a variable for storing the Message object used for all of the functions
-var task; //variables for the Cron Job
+var taskStart; //variables for the Cron Job
+var taskStop;
 var timeStart;
 var timeStop;
 var hourStart;
 var minutesStart;
 var hourStop;
 var minutesStop;
+var offset //timezone offset ( to UTC )
 
 var guildID; //test variable
 
@@ -69,6 +71,13 @@ var statusMessage = new Discord.RichEmbed()
    .addBlankField(true)
    .addField("Godzina zamknięcia:", `Nie ustawiono`, true);
 
+function updateTimeZone(){
+  
+  let offsetString = moment().tz("Europe/Warsaw").format('Z'); //moment() returns today's date and .tz() returns the offset ( in terms of UTC );
+  offset = offsetString[2];
+  console.log(offset); 
+
+}
 
 function unmuteUsers(message, role) {
 
@@ -110,11 +119,16 @@ function startGuild(message){
     console.log("Starting the guild unsuccessful: Guild already running!")
   }
   if(!roleExists()){
-    message.channel.send("Please run !setup first before executing any commands.");
+    console.log("Role doesn't exist. Operation aborted.")
+    message.channel.send("Nie możesz użyć !cancel, póki konfiguracja nie została zapisana poprzez !setup");
     return;
   }
   unmuteUsers(message, role);
-  console.log(" Channels have been unmuted.");
+  console.log("Channels have been unmuted.");
+  if(taskStart || taskStop){
+    message.channel.send(`*Open the gates!* Serwer zostaje otwarty! Bramy zamykamy o godzinie ${((((parseInt(hourStop,10) + parseInt(offset, 10)) % 24) + 24) % 24)}:${minutesStop}`)
+  }
+  
   return;
 }
 
@@ -123,12 +137,16 @@ function stopGuild(message){
     console.log("Stopping the guild unsuccessful: Guild already stopped!")
   }
   if(!roleExists()){
-    message.channel.send("Please run !setup first before executing any commands.");
+    console.log("Role doesn't exist. Operation aborted.")
+    message.channel.send("Nie możesz użyć !cancel, póki konfiguracja nie została zapisana poprzez !setup");
     return;
   }
   muteUsers(message, role);
   //muteVC(message);
-  console.log(" Channels have been muted.");
+  console.log("Channels have been muted.");
+  if(taskStart || taskStop){
+    message.channel.send(`*Close the gates!* Serwer zostaje zamknięty! Bramy otwieramy ponownie o godzinie ${((((parseInt(hourStart,10) + parseInt(offset, 10)) % 24) + 24) % 24)}:${minutesStart}`)
+  }
   return;
 }
 
@@ -138,7 +156,7 @@ function roleExists(){
   }
   return false;
 }
-
+/*
 function changeGuildStatus(message){
   if(guildActive){
     console.log(" Deactivating the guild!");
@@ -150,14 +168,15 @@ function changeGuildStatus(message){
     startGuild(message);
   }
 };
-
+*/
 function setupCronJob(message){
   //var manageGuild = new cron.CronJob(`* ${minutesStart}/${minutesStop} ${hourStart}/${hourStop} * * *`, changeGuildStatus(storedMessage));
   //var manageGuild = new cron.CronJob('*2 * * * * *', changeGuildStatus(storedMessage));
   //manageGuild.start();
 
-  console.log(" Setting up the CronJob");
-  task = cron.schedule(`${minutesStart},${minutesStop} ${hourStart},${hourStop} * * *`, () => changeGuildStatus(storedMessage));
+  console.log("Setting up the CronJob");
+  taskStart = cron.schedule(`${minutesStart} ${hourStart} * * *`, () => startGuild(storedMessage));
+  taskStop = cron.schedule(`${minutesStop} ${hourStop} * * *`, () => stopGuild(storedMessage));
   console.log(" -----CronJob starting!-----")
 
   //displaying the status message to the chat
@@ -171,6 +190,7 @@ function setupCronJob(message){
 
 
 client.on('ready', () => {
+  updateTimeZone();
   console.log(`Logged in as ${client.user.tag}!`);
   console.log(`Bot has started, with ${client.users.size} users, in ${client.channels.size} channels of ${client.guilds.size} guild(s).`);
 });
@@ -213,7 +233,7 @@ client.on('message', async message => {
 
     role = message.guild.roles.find(r => r.name === "Muted");
     if(!role){
-      console.log(" Setting up the required role");
+      console.log("Setting up the required role");
       try {
         role = await message.guild.createRole({
           name: "Muted",
@@ -239,19 +259,19 @@ client.on('message', async message => {
         });*/
 
         await role.setPosition(0);
-        console.log(" Role position set!");
+        console.log("Role position set!");
       } catch(error) {
           console.log(error.stack);
       }
     }
     if(args.length < 2){
-      console.log(" Too little arguments given!");
-      message.channel.send("Too little arguments given!");
+      console.log("Too little arguments given!");
+      message.channel.send("Dostałem za mało danych! Podaj godzinę otwarcia i zamknięcia serwera w formacie HH:MM HH:MM.");
       return;
     }
     if(args.length > 2){
-      console.log(" Too many arguments given!");
-      message.channel.send("Too many arguments given!");
+      console.log("Too many arguments given!");
+      message.channel.send("Dostałem złe dane! Sprawdź czy podałeś godzinę w odpowiednim formacie ( HH:MM )");
       return;
     }
 
@@ -264,22 +284,26 @@ client.on('message', async message => {
 
     //Get the start time ( check regex )
     if (regexTime.test(timeStart)){
-      console.log(" Start time regex matched!");
+      console.log("Start time regex matched!");
       hourStart = timeStart.substr(0, timeStart.indexOf(":"));
       if(hourStart >= 24 || hourStart < 0){
-        console.log(" Start hour incorrect!");
+        console.log("Start hour incorrect!");
         message.channel.send("Wpisz poprawną godzinę otwarcia serwera z zakresu 0-23")
         return;
       }
+      hourStart = ((((parseInt(hourStart,10) - parseInt(offset, 10)) % 24) + 24) % 24).toString();  //convert time to client's locale
+      ///(((n % m) + m) % m) - to achieve Python-like modulo operation
+      
+      console.log(`Start hour after conversion is ${hourStart}`);
       minutesStart = timeStart.substr(timeStart.indexOf(":") + 1);
       if(minutesStart >= 60 || minutesStart < 0){
-        console.log(" Start minute incorrect!");
+        console.log("Start minute incorrect!");
         message.channel.send("Wpisz poprawną minutę otwarcia serwera z zakresu 0-59");
         return;
       }
       console.log(`Specified start time was ${hourStart}:${minutesStart}`);
     } else {
-      console.log(" Start time regex not matched!")
+      console.log("Start time regex not matched!")
       console.log(`User input was ${timeStart}`)
       message.channel.send("Wpisz godzinę otwarcia serwera w poprawnym formacie (HH:MM)");
       return;
@@ -287,29 +311,41 @@ client.on('message', async message => {
 
     //Get the stop time ( regex )
     if (regexTime.test(timeStop)){
-      console.log(" Stop time regex matched!");
+      console.log("Stop time regex matched!");
       hourStop = timeStop.substr(0, timeStop.indexOf(":"));
-      if(hourStart >= 24 || hourStart < 0){
+      if(hourStop >= 24 || hourStop < 0){1
         console.log("Closure hour incorrect!");
         message.channel.send("Wpisz poprawną godzinę zamknięcia serwera z zakresu 0-23")
         return;
       }
+      hourStop = ((((parseInt(hourStop,10) - parseInt(offset, 10)) % 24) + 24) % 24).toString();  //convert time to client's locale
+
       minutesStop = timeStop.substr(timeStop.indexOf(":") + 1);
       console.log(`Specified closure time was ${hourStop}:${minutesStop}`);
     } else {
-      console.log(" Stop time regex not matched!")
+      console.log("Stop time regex not matched!")
       console.log(`User input was ${timeStop}`)
       message.channel.send("Wpisz godzinę zamknięcia serwera w poprawnym formacie (HH:MM)");
       return;
     }
-    console.log(" Logging requested setup to ./requested.txt");
+    console.log("Logging requested setup to ./requested.txt");
     fs.writeFile('requested.txt', `${hourStart} ${minutesStart} ${hourStop} ${minutesStop}`, function (err) {
       if (err) return console.log(err);
       console.log(`${hourStart} ${minutesStart} ${hourStop} ${minutesStop} > requested.txt`);
     });
 
 
-    setupCronJob(message);
+
+    setupCronJob(message); // sets up the cron jobs for starting and stopping the guild
+
+    //Modifies the status message to client's local timezone
+    //converts the UTC hour used on the server side to the current locale time of client ( some modulo stuff to implement Python-like modulo)
+    statusMessage.fields[1].value = `${((((parseInt(hourStart,10) + parseInt(offset, 10)) % 24) + 24) % 24)}:${minutesStart}`
+    //statusMessage.fields[1] = ("Godzina zamknięcia:", `${hourStop}:${minutesStop}`, true);
+    // the second field  ( index 1 ) is a BLIND field
+    statusMessage.fields[3].value = `${((((parseInt(hourStop,10) + parseInt(offset, 10)) % 24) + 24) % 24)}:${minutesStop}`
+
+    //send the status message to chat
     message.channel.send(statusMessage);
     return;
     /*
@@ -335,8 +371,9 @@ client.on('message', async message => {
       console.log(" !cancel requested before !setup");
       return;
     }
-    if(task){
-      task.destroy();
+    if(taskStart || taskStop){
+      taskStart.destroy();
+      taskStop.destroy();
       /*
       var hourStart = null;
       var timeStart = null;
@@ -348,28 +385,14 @@ client.on('message', async message => {
     } else {
       console.log(" No job to destroy.");
     }
-    fs.writeFile('requested.txt', ``, function (err) {
+    fs.writeFile('requested.txt', ``, function (err) {    //erases all requested jobs from the ./requested.txt file
       if (err) return console.log(err);
       console.log(` > requested.txt`);
     });
     console.log(" Cleared the ./requested.txt");
     return;
   }
-
-  if(command === `${prefix}status`){
-    message.channel.send("GateKeeper obecny!");
-    if(guildActive){
-      statusMessage.fields[0].value = "Serwer aktywny";
-    } else {
-      statusMessage.fields[0].value = 'Serwer nieaktywny';
-    }
-    if(task){
-      statusMessage.fields[1].value = `${hourStart}:${minutesStart}`
-      //statusMessage.fields[1] = ("Godzina zamknięcia:", `${hourStop}:${minutesStop}`, true);
-      // the second field is a BLIND field
-      statusMessage.fields[3].value = `${hourStop}:${minutesStop}`
-    }
-
+  if(command === `${prefix}restart`){
     //update requested jobs
     let contents = fs.readFileSync('requested.txt');
     if(contents.length > 0){
@@ -385,8 +408,23 @@ client.on('message', async message => {
     } else {
       console.log("Found ./requested.txt but it was empty!");
     }
+    
+  }
+  if(command === `${prefix}status`){
+    message.channel.send("GateKeeper obecny!");
+    if(guildActive){
+      statusMessage.fields[0].value = "Serwer aktywny";
+    } else {
+      statusMessage.fields[0].value = 'Serwer nieaktywny';
+    }
+    if(taskStart || taskStop){
 
-
+      //converts the UTC hour used on the server side to the current locale time of client ( some modulo stuff to implement Python-like modulo)
+      statusMessage.fields[1].value = `${((((parseInt(hourStart,10) + parseInt(offset, 10)) % 24) + 24) % 24)}:${minutesStart}`
+      //statusMessage.fields[1] = ("Godzina zamknięcia:", `${hourStop}:${minutesStop}`, true);
+      // the second field  ( index 1 ) is a BLIND field
+      statusMessage.fields[3].value = `${((((parseInt(hourStop,10) + parseInt(offset, 10)) % 24) + 24) % 24)}:${minutesStop}`
+    }
     message.channel.send(statusMessage);
     return;
   }

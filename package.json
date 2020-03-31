@@ -5,7 +5,7 @@
   "main": "index_test.js",
   "engines": {
     "node": "v13.11.0",
-    "npm" : "*"
+    "npm": "*"
   },
   "scripts": {
     "start": "node index_test.js",
@@ -16,6 +16,7 @@
     "discord.js": "^11.6.3",
     "dotenv": "^8.2.0",
     "fs": "0.0.1-security",
+    "moment-timezone": "^0.5.28",
     "node-cron": "^2.0.3"
   },
   "devDependencies": {
