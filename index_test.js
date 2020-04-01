@@ -17,7 +17,8 @@ var hourStart;
 var minutesStart;
 var hourStop;
 var minutesStop;
-var offset //timezone offset ( to UTC )
+var offset; //timezone offset ( to UTC )
+var userCounter = 0;
 
 var guildID; //test variable
 
@@ -85,12 +86,14 @@ function unmuteUsers(message, role) {
     if(user.hasPermission("ADMINISTRATOR")){
       return;
     }
-    console.log(`Currently unmuting user ${user.name}`);
+    userCounter += 1;
+    console.log(`Currently unmuting user ${userCounter} ${user.user.username}`);
     setTimeout(() => {
       user.removeRole(role.id).catch(console.error);
     })
     
   });
+  userCounter = 0;
 
 }
 //'692388332130533447' -- role id for debugging
@@ -106,12 +109,14 @@ function muteUsers(message, role) {
       user.setMute(1).catch(console.error);
       user.setDeaf(1).catch(console.error);
     }
-    console.log(`Currently muting user ${user.name}`);
+    userCounter += 1;
+    console.log(`Currently muting user ${userCounter} ${user.user.username}`);
     // mute each user in the guild and catch errors
     setTimeout(() => {
       user.addRole(role.id).catch(console.error);
     })
   });
+  userCounter = 0;
 }
 /*
 function muteVC(message){
@@ -283,7 +288,7 @@ client.on('message', async message => {
             SPEAK: false
           });
         });*/
-
+        
         await role.setPosition(0);
         console.log("Role position set!");
       } catch(error) {
