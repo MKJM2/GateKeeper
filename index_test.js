@@ -85,7 +85,11 @@ function unmuteUsers(message, role) {
     if(user.hasPermission("ADMINISTRATOR")){
       return;
     }
-    user.removeRole(role.id).catch(console.error)
+    console.log(`Currently unmuting user ${user.name}`);
+    setTimeout(() => {
+      user.removeRole(role.id).catch(console.error);
+    })
+    
   });
 
 }
@@ -102,8 +106,11 @@ function muteUsers(message, role) {
       user.setMute(1).catch(console.error);
       user.setDeaf(1).catch(console.error);
     }
-
-    user.addRole(role.id).catch(console.error)  // mute each user in the guild and catch errors
+    console.log(`Currently muting user ${user.name}`);
+    // mute each user in the guild and catch errors
+    setTimeout(() => {
+      user.addRole(role.id).catch(console.error);
+    })
   });
 }
 /*
